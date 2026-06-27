@@ -1,0 +1,5 @@
+supabase
+pytz
+pyautogui
+Pillow
+pystray
