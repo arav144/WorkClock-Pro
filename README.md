@@ -47,12 +47,12 @@ A modern desktop employee time tracking application built with Python, Tkinter, 
 ```
 WorkClock-Pro/
 │
-├── main.py
-├── database/
-├── assets/
 ├── images/
 ├── README.md
-└── requirements.txt
+├── Tracker 2.0.spec
+├── index.html
+├── requirements.txt
+└── workclock_pro.py
 ```
 
 ---
