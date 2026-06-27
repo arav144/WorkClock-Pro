@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <meta name="author" content="arav144">
+<title>WorkClock Pro — Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0F1724;--card:#1A2535;--card2:#1E2D40;
+    --accent:#3B82F6;--success:#10B981;--danger:#EF4444;--warning:#F59E0B;
+    --text:#F1F5F9;--muted:#64748B;--border:#2D3F55;
+  }
+  body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:210px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
+  .logo{padding:18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .logo-icon{font-size:22px}
+  .logo-text{font-size:14px;font-weight:700;color:var(--text)}
+  .logo-ver{font-size:10px;color:var(--muted)}
+  .nav{padding:12px 0;flex:1}
+  .nav-section{font-size:9px;font-weight:600;color:var(--muted);padding:10px 16px 4px;letter-spacing:.08em;text-transform:uppercase}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-left:2px solid transparent;transition:.15s}
+  .nav-item:hover{color:var(--text);background:rgba(255,255,255,.04)}
+  .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(59,130,246,.08)}
+  .sb-status{padding:12px 16px;border-top:1px solid var(--border);font-size:11px}
+  .sb-dot{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;margin-right:5px}
+  .sb-dot.off{background:var(--danger)}
+  .main{margin-left:210px;padding:24px;min-height:100vh}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .topbar h1{font-size:18px;font-weight:700}
+  .topbar-right{display:flex;gap:10px;align-items:center}
+  .refresh-btn{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;transition:.15s}
+  .refresh-btn:hover{background:var(--accent)}
+  .badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600}
+  .badge-success{background:rgba(16,185,129,.15);color:var(--success)}
+  .badge-warning{background:rgba(245,158,11,.15);color:var(--warning)}
+  .badge-danger{background:rgba(239,68,68,.15);color:var(--danger)}
+  .badge-muted{background:var(--card2);color:var(--muted)}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .kpi-label{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .kpi-val{font-size:26px;font-weight:700;line-height:1}
+  .kpi-sub{font-size:10px;color:var(--muted);margin-top:4px}
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .card-title{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+  .card-sub{font-size:10px;color:var(--muted);font-weight:400}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:var(--muted);font-size:10px;font-weight:600;padding:6px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.05em}
+  td{padding:10px 10px;border-bottom:1px solid rgba(45,63,85,.5);vertical-align:middle}
+  tr:last-child td{border:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  .avatar{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;margin-right:8px;flex-shrink:0}
+  .emp-cell{display:flex;align-items:center}
+  .prog{height:5px;background:var(--border);border-radius:3px;width:70px;display:inline-block;vertical-align:middle;margin-left:8px}
+  .prog-fill{height:5px;border-radius:3px;transition:.3s}
+  .chart-wrap{position:relative;height:200px;width:100%}
+  .loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted);font-size:13px}
+  .empty{text-align:center;padding:40px;color:var(--muted);font-size:13px}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .section-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+
+  .settings-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:500px}
+  .form-group{margin-bottom:16px}
+  .form-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .form-input{width:100%;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;transition:.15s}
+  .form-input:focus{border-color:var(--accent)}
+  .save-btn{background:var(--accent);color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+  .save-btn:hover{background:#2563EB}
+  .save-msg{font-size:11px;color:var(--success);margin-top:8px;display:none}
+  .page{display:none}
+  .page.active{display:block}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo">
+    <span class="logo-icon">⏱</span>
+    <div>
+      <div class="logo-text">WorkClock Pro</div>
+      <div class="logo-ver">Admin Dashboard</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Overview</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)">📊 Dashboard</div>
+    <div class="nav-item" onclick="showPage('employees',this)">👥 Employees</div>
+    <div class="nav-section">Reports</div>
+    <div class="nav-item" onclick="showPage('logs',this)">📋 All Logs</div>
+    <div class="nav-item" onclick="showPage('attendance',this)">📅 Attendance</div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="showPage('settings',this)">⚙️ Settings</div>
+  </nav>
+  <div class="sb-status">
+    <span class="sb-dot" id="sb-dot"></span>
+    <span id="sb-status-text" style="color:var(--muted)">Connecting…</span>
+    <div style="font-size:9px;color:var(--muted);margin-top:3px" id="last-refresh"></div>
+  </div>
+</div>
+
+
+<div class="main">
+  <div class="page active" id="page-dashboard">
+    <div class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="today-label">Loading…</div>
+      </div>
+      <div class="topbar-right">
+        <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+        <span class="badge badge-success" id="active-badge">— Active</span>
+      </div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Active today</div>
+        <div class="kpi-val" id="kpi-active">—</div>
+        <div class="kpi-sub" id="kpi-active-sub">Loading…</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">On time</div>
+        <div class="kpi-val" style="color:var(--success)" id="kpi-ontime">—</div>
+        <div class="kpi-sub" id="kpi-ontime-sub">—</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avg hours today</div>
+        <div class="kpi-val" style="color:var(--accent)" id="kpi-avghours">—</div>
+        <div class="kpi-sub" id="kpi-target-sub">target 9h</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Absent / no check-in</div>
+        <div class="kpi-val" style="color:var(--warning)" id="kpi-absent">—</div>
+        <div class="kpi-sub">today</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">
+          Live — today's sessions
+          <span style="font-size:10px;color:var(--muted)" class="card-sub"><span class="live-dot"></span> Live</span>
+        </div>
+        <div id="live-table-wrap">
+          <div class="loading">Loading…</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Hours worked today <span class="card-sub">per employee</span></div>
+        <div class="chart-wrap"><canvas id="chart-hours"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recent logs <span class="card-sub">last 7 days</span></div>
+      <div id="recent-logs-wrap"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+
+
+  <div class="page" id="page-employees">
+    <div class="topbar"><h1>Employees</h1></div>
+    <div class="card">
+      <div id="emp-table-wrap"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+  <div class="page" id="page-logs">
+    <div class="topbar">
+      <h1>All Logs</h1>
+      <div class="topbar-right">
+        <input type="date" id="filter-date" class="form-input" style="width:160px">
+        <button class="refresh-btn" onclick="loadLogs()">Filter</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="logs-table-wrap"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+  <div class="page" id="page-attendance">
+    <div class="topbar"><h1>Attendance</h1></div>
+    <div class="card">
+      <div id="att-table-wrap"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+  <div class="page" id="page-settings">
+    <div class="topbar"><h1>Settings</h1></div>
+    <div class="settings-panel">
+      <div class="form-group">
+        <label class="form-label">Override password (secret_code)</label>
+        <input class="form-input" id="cfg-password" type="text" placeholder="Enter new password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Daily target hours</label>
+        <input class="form-input" id="cfg-hours" type="number" step="0.5" placeholder="9">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Late after (HH:MM)</label>
+        <input class="form-input" id="cfg-late" type="time" placeholder="09:30">
+      </div>
+      <button class="save-btn" onclick="saveConfig()">Save Changes</button>
+      <div class="save-msg" id="save-msg">✓ Saved! EXE will pick up changes on next start.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+SUPABASE_URL="https://example.supabase.co"
+SUPABASE_KEY="your_supabase_anon_key_here"
+const TARGET_HOURS = 9
+
+
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let hoursChart = null
+const COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316']
+
+function initRealtime() {
+  db.channel('time_logs_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'time_logs' }, () => {
+      loadDashboard()
+    })
+    .subscribe(status => {
+      const dot = document.getElementById('sb-dot')
+      const txt = document.getElementById('sb-status-text')
+      if (status === 'SUBSCRIBED') {
+        dot.classList.remove('off')
+        txt.textContent = 'Live — Supabase'
+        txt.style.color = '#10B981'
+      } else {
+        dot.classList.add('off')
+        txt.textContent = 'Reconnecting…'
+        txt.style.color = '#F59E0B'
+      }
+    })
+}
+
+
+function fmtHM(hours) {
+  if (!hours && hours !== 0) return '—'
+  const h = Math.floor(hours)
+  const m = Math.round((hours - h) * 60)
+  return `${h}h ${String(m).padStart(2,'0')}m`
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('en-IN')
+}
+
+function initials(name) {
+  return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)
+}
+
+function avatarColor(name) {
+  const i = (name||'').charCodeAt(0) % COLORS.length
+  return COLORS[i]
+}
+
+function statusBadge(status, liveStatus) {
+  const s = liveStatus || status
+  const map = {
+    LIVE:             ['background:rgba(16,185,129,.15);color:#10B981', '● Live'],
+    COMPLETED:        ['background:rgba(59,130,246,.15);color:#3B82F6', '✓ Done'],
+    INTERRUPTED:      ['background:rgba(239,68,68,.15);color:#EF4444', '⚡ Interrupted'],
+    LOST_CONNECTION:  ['background:rgba(245,158,11,.15);color:#F59E0B', '⚠ Lost conn.'],
+    RUNNING:          ['background:rgba(16,185,129,.15);color:#10B981', '● Running'],
+    ABSENT:           ['background:rgba(100,116,139,.15);color:#64748B', 'Absent'],
+    PRESENT:          ['background:rgba(16,185,129,.15);color:#10B981', 'Present'],
+    LATE:             ['background:rgba(245,158,11,.15);color:#F59E0B', 'Late'],
+    HALF_DAY:         ['background:rgba(59,130,246,.15);color:#3B82F6', 'Half day'],
+  }
+  const [style, label] = map[s] || ['background:var(--card2);color:var(--muted)', s]
+  return `<span style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;${style}">${label}</span>`
+}
+
+function progressBar(hours, target) {
+  const pct = Math.min(100, Math.round((hours / target) * 100))
+  const col = pct >= 100 ? '#10B981' : pct >= 60 ? '#3B82F6' : '#F59E0B'
+  return `<div class="prog"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>`
+}
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0]
+}
+
+async function loadDashboard() {
+  const today = todayISO()
+  document.getElementById('today-label').textContent =
+    new Date().toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+
+
+  const { data: logs, error } = await db.from('dashboard_today').select('*')
+
+  if (error) {
+    console.error('Dashboard fetch error:', error)
+    document.getElementById('live-table-wrap').innerHTML =
+      `<div class="empty" style="color:var(--danger)">Error: ${error.message}</div>`
+    return
+  }
+
+
+  const active   = logs.filter(l => l.live_status === 'LIVE' || l.live_status === 'RUNNING').length
+  const completed = logs.filter(l => l.live_status === 'COMPLETED').length
+  const interrupted = logs.filter(l => l.live_status === 'INTERRUPTED' || l.live_status === 'LOST_CONNECTION').length
+  const totalHours = logs.reduce((s, l) => s + (parseFloat(l.duration_hours) || 0), 0)
+  const avgHours = logs.length ? totalHours / logs.length : 0
+
+  document.getElementById('kpi-active').textContent = active
+  document.getElementById('kpi-active-sub').textContent = `${completed} completed, ${interrupted} interrupted`
+  document.getElementById('kpi-ontime').textContent = completed
+  document.getElementById('kpi-ontime-sub').textContent = `sessions completed`
+  document.getElementById('kpi-avghours').textContent = fmtHM(avgHours)
+  document.getElementById('kpi-absent').textContent = interrupted
+  document.getElementById('active-badge').textContent = `${active} Active`
+  document.getElementById('last-refresh').textContent = `Updated ${new Date().toLocaleTimeString('en-IN')}`
+
+
+  if (!logs.length) {
+    document.getElementById('live-table-wrap').innerHTML = '<div class="empty">No sessions today yet.</div>'
+  } else {
+    document.getElementById('live-table-wrap').innerHTML = `
+      <table>
+        <thead><tr>
+          <th>Employee</th><th>Task</th><th>Started</th>
+          <th>Break</th><th>Hours</th><th>Progress</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          ${logs.map(l => `<tr>
+            <td><div class="emp-cell">
+              <div class="avatar" style="background:${avatarColor(l.employee_name)}22;color:${avatarColor(l.employee_name)}">${initials(l.employee_name)}</div>
+              ${l.employee_name}
+            </div></td>
+            <td style="color:var(--muted)">${l.task || '—'}</td>
+            <td>${fmtTime(l.start_time)}</td>
+            <td>${fmtHM(l.break_hours)}</td>
+            <td style="font-weight:600">${fmtHM(l.duration_hours)}</td>
+            <td>${progressBar(l.duration_hours || 0, TARGET_HOURS)}</td>
+            <td>${statusBadge(l.status, l.live_status)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`
+  }
+
+
+  const empMap = {}
+  logs.forEach(l => {
+    empMap[l.employee_name] = (empMap[l.employee_name] || 0) + (parseFloat(l.duration_hours) || 0)
+  })
+  const labels = Object.keys(empMap)
+  const vals   = Object.values(empMap).map(v => parseFloat(v.toFixed(2)))
+
+  if (hoursChart) hoursChart.destroy()
+  hoursChart = new Chart(document.getElementById('chart-hours'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Worked', data: vals, backgroundColor: '#3B82F6', borderRadius: 4, barPercentage: 0.5 },
+        { label: 'Target', data: labels.map(() => TARGET_HOURS), backgroundColor: '#2D3F55', borderRadius: 4, barPercentage: 0.5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 9 } } },
+        y: { grid: { color: '#1E2D40' }, max: TARGET_HOURS + 1,
+             ticks: { color: '#64748B', callback: v => v + 'h', stepSize: 3 } }
+      }
+    }
+  })
+}
+
+
+async function loadRecentLogs() {
+  const from = new Date()
+  from.setDate(from.getDate() - 7)
+  const { data, error } = await db
+    .from('time_logs')
+    .select('*, employees(name)')
+    .gte('date', from.toISOString().split('T')[0])
+    .order('start_time', { ascending: false })
+    .limit(50)
+
+  if (error || !data?.length) {
+    document.getElementById('recent-logs-wrap').innerHTML = '<div class="empty">No logs found.</div>'
+    return
+  }
+
+  document.getElementById('recent-logs-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Employee</th><th>Date</th><th>Task</th>
+        <th>Start</th><th>End</th><th>Break</th><th>Hours</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(l => {
+          const name = l.employees?.name || '—'
+          return `<tr>
+            <td><div class="emp-cell">
+              <div class="avatar" style="background:${avatarColor(name)}22;color:${avatarColor(name)}">${initials(name)}</div>
+              ${name}
+            </div></td>
+            <td style="color:var(--muted)">${fmtDate(l.date)}</td>
+            <td style="color:var(--muted)">${l.task || '—'}</td>
+            <td>${fmtTime(l.start_time)}</td>
+            <td>${fmtTime(l.end_time)}</td>
+            <td>${fmtHM(l.break_hours)}</td>
+            <td style="font-weight:600">${fmtHM(l.duration_hours)}</td>
+            <td>${statusBadge(l.status)}</td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>`
+}
+
+
+async function loadLogs() {
+  const dateVal = document.getElementById('filter-date').value || todayISO()
+  const { data, error } = await db
+    .from('time_logs')
+    .select('*, employees(name)')
+    .eq('date', dateVal)
+    .order('start_time', { ascending: false })
+
+  if (error || !data?.length) {
+    document.getElementById('logs-table-wrap').innerHTML = '<div class="empty">No logs for this date.</div>'
+    return
+  }
+
+  document.getElementById('logs-table-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Employee</th><th>Task</th><th>Start</th>
+        <th>End</th><th>Break</th><th>Hours</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(l => {
+          const name = l.employees?.name || '—'
+          return `<tr>
+            <td><div class="emp-cell">
+              <div class="avatar" style="background:${avatarColor(name)}22;color:${avatarColor(name)}">${initials(name)}</div>
+              ${name}
+            </div></td>
+            <td style="color:var(--muted)">${l.task || '—'}</td>
+            <td>${fmtTime(l.start_time)}</td>
+            <td>${fmtTime(l.end_time)}</td>
+            <td>${fmtHM(l.break_hours)}</td>
+            <td style="font-weight:600">${fmtHM(l.duration_hours)}</td>
+            <td>${statusBadge(l.status)}</td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>`
+}
+
+
+async function loadEmployees() {
+  const { data, error } = await db
+    .from('employees')
+    .select('*, time_logs(duration_hours, date, status)')
+    .eq('is_active', true)
+
+  if (error || !data?.length) {
+    document.getElementById('emp-table-wrap').innerHTML = '<div class="empty">No employees found.</div>'
+    return
+  }
+
+  const today = todayISO()
+  document.getElementById('emp-table-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Name</th><th>Device ID</th>
+        <th>Today's hours</th><th>Total sessions</th><th>Registered</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(e => {
+          const todayLogs = (e.time_logs||[]).filter(l => l.date === today && l.status === 'COMPLETED')
+          const todayHrs  = todayLogs.reduce((s,l) => s + (parseFloat(l.duration_hours)||0), 0)
+          const total     = (e.time_logs||[]).length
+          return `<tr>
+            <td><div class="emp-cell">
+              <div class="avatar" style="background:${avatarColor(e.name)}22;color:${avatarColor(e.name)}">${initials(e.name)}</div>
+              <strong>${e.name}</strong>
+            </div></td>
+            <td style="color:var(--muted);font-size:10px">${(e.device_id||'').slice(0,24)}…</td>
+            <td>${todayHrs ? fmtHM(todayHrs) : '<span style="color:var(--muted)">Not started</span>'}</td>
+            <td style="color:var(--muted)">${total}</td>
+            <td style="color:var(--muted)">${fmtDate(e.created_at)}</td>
+          </tr>`
+        }).join('')}
+      </tbody>
+    </table>`
+}
+
+
+async function loadAttendance() {
+  const { data, error } = await db
+    .from('attendance')
+    .select('*')
+    .order('date', { ascending: false })
+    .limit(100)
+
+  if (error || !data?.length) {
+    document.getElementById('att-table-wrap').innerHTML = '<div class="empty">No attendance records yet.</div>'
+    return
+  }
+
+  document.getElementById('att-table-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Employee</th><th>Date</th><th>Check In</th>
+        <th>Check Out</th><th>Hours</th><th>Break</th><th>Status</th><th>Target met</th>
+      </tr></thead>
+      <tbody>
+        ${data.map(a => `<tr>
+          <td><div class="emp-cell">
+            <div class="avatar" style="background:${avatarColor(a.employee_name)}22;color:${avatarColor(a.employee_name)}">${initials(a.employee_name)}</div>
+            ${a.employee_name}
+          </div></td>
+          <td style="color:var(--muted)">${fmtDate(a.date)}</td>
+          <td>${fmtTime(a.check_in)}</td>
+          <td>${fmtTime(a.check_out)}</td>
+          <td style="font-weight:600">${fmtHM(a.total_hours)}</td>
+          <td>${fmtHM(a.total_break)}</td>
+          <td>${statusBadge(a.status)}</td>
+          <td>${a.target_met
+            ? '<span style="color:var(--success)">✓ Yes</span>'
+            : '<span style="color:var(--danger)">✗ No</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`
+}
+
+
+async function loadSettings() {
+  const { data } = await db.from('app_config').select('*')
+  if (!data) return
+  data.forEach(row => {
+    if (row.key === 'secret_code')   document.getElementById('cfg-password').value = row.value
+    if (row.key === 'target_hours')  document.getElementById('cfg-hours').value    = row.value
+    if (row.key === 'late_after')    document.getElementById('cfg-late').value     = row.value
+  })
+}
+
+async function saveConfig() {
+  const updates = [
+    { key: 'secret_code',  value: document.getElementById('cfg-password').value },
+    { key: 'target_hours', value: document.getElementById('cfg-hours').value },
+    { key: 'late_after',   value: document.getElementById('cfg-late').value },
+  ].filter(u => u.value)
+
+  for (const u of updates) {
+    await db.from('app_config').upsert({ key: u.key, value: u.value })
+  }
+  const msg = document.getElementById('save-msg')
+  msg.style.display = 'block'
+  setTimeout(() => msg.style.display = 'none', 3000)
+}
+
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('page-' + name).classList.add('active')
+  el.classList.add('active')
+
+  if (name === 'employees') loadEmployees()
+  if (name === 'logs') { document.getElementById('filter-date').value = todayISO(); loadLogs() }
+  if (name === 'attendance') loadAttendance()
+  if (name === 'settings') loadSettings()
+}
+
+async function loadAll() {
+  await loadDashboard()
+  await loadRecentLogs()
+}
+
+
+loadAll()
+initRealtime()
+setInterval(loadDashboard, 60000)
+</script>
+</body>
+</html>
