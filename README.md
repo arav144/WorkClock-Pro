@@ -25,8 +25,7 @@ A modern desktop employee time tracking application built with Python, Tkinter, 
 - ✅ Automatic Heartbeat
 - ✅ Employee Registration
 - ✅ Daily Timesheet Export
-- ✅ Modern UI
-- ✅ Dark Theme
+- ✅ Modern Dark UI
 
 ---
 
@@ -44,47 +43,45 @@ A modern desktop employee time tracking application built with Python, Tkinter, 
 
 ## 📂 Project Structure
 
-```
+```text
 WorkClock-Pro/
 │
 ├── images/
 ├── README.md
 ├── Tracker 2.0.spec
-├── index.html
 ├── requirements.txt
-└── workclock_pro.py
+├── WorkClock.exe
+└── LICENSE
 ```
 
 ---
 
-## 🚀 Installation
+## 🚀 Getting Started
 
-```bash
-git clone https://github.com/arav144/WorkClock-Pro.git
+1. Download **WorkClock.exe** from the repository or Releases.
+2. Launch the application.
+3. Enter your name.
+4. Start tracking your work.
 
-cd WorkClock-Pro
-
-pip install -r requirements.txt
-
-python main.py
-```
+> No Python installation is required to run the executable.
 
 ---
 
-## ⚙️ Environment Variables
+## 🔐 Demo Credentials
 
-Create a `.env` file:
+For demonstration purposes only:
 
-```env
-SUPABASE_URL=your-project-url
-SUPABASE_KEY=your-anon-key
+```text
+Password: 123
 ```
+
+> Change the password before using the application in a production environment.
 
 ---
 
 ## 🎯 Highlights
 
-- Real-time employee tracking
+- Real-time employee time tracking
 - Secure cloud synchronization
 - Offline SQLite support
 - Daily work target monitoring
@@ -95,7 +92,7 @@ SUPABASE_KEY=your-anon-key
 
 ## 📄 License
 
-This project is for portfolio and educational purposes.
+This project is intended for portfolio and educational purposes.
 
 ---
 
@@ -103,4 +100,4 @@ This project is for portfolio and educational purposes.
 
 **Arav Jha**
 
-If you like this project, don't forget to ⭐ the repository.
+⭐ If you like this project, consider starring the repository.
